@@ -1,5 +1,4 @@
-# backend/main.py
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -73,38 +72,43 @@ research_topics = {
     "Swarm Robotics Applications": "Coordination of multiple robots to perform tasks efficiently."
 }
 
-# ------------------------
-# Endpoints
-# ------------------------
+# Define your API key
+API_KEY = "AIzaSyCYSJXf09RObgZ7zcnD4Ovv_pfC2fl-uwc"
 
-# Root test
+# Helper function to validate API key
+def validate_api_key(x_api_key: str = Header(...)):
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API Key")
+
+# Endpoints
+
 @app.get("/")
 def root():
     return {"message": "Backend is live and serving 50 research topics!"}
 
-# Search a topic
 @app.get("/search")
-def search_topic(q: str = Query(..., description="Topic to search for")):
+def search_topic(q: str = Query(..., description="Topic to search for"), x_api_key: str = Header(...)):
+    validate_api_key(x_api_key)
+    
     topic = research_topics.get(q)
     if topic:
         return {"topic": q, "description": topic}
     else:
-        # Optional: suggest closest matches
         suggestions = [t for t in research_topics.keys() if q.lower() in t.lower()]
         return {"error": f"No description found for '{q}'", "suggestions": suggestions}
 
-# Summarize a topic
 @app.get("/summarize")
-def summarize_topic(topic: str = Query(..., description="Topic to summarize")):
+def summarize_topic(topic: str = Query(..., description="Topic to summarize"), x_api_key: str = Header(...)):
+    validate_api_key(x_api_key)
+    
     description = research_topics.get(topic)
     if description:
-        # For now, summary is same as description; can be extended later
         return {"topic": topic, "summary": description}
     else:
         suggestions = [t for t in research_topics.keys() if topic.lower() in t.lower()]
         return {"error": f"No summary found for '{topic}'", "suggestions": suggestions}
 
-# Get all topics
 @app.get("/all")
-def get_all_topics():
+def get_all_topics(x_api_key: str = Header(...)):
+    validate_api_key(x_api_key)
     return {"topics": list(research_topics.keys())}
