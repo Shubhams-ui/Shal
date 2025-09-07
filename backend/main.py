@@ -1,4 +1,3 @@
-# backend/main.py
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -6,8 +5,8 @@ app = FastAPI()
 
 # Allow frontend requests
 origins = [
-    "http://localhost:5173",
-    "https://cloe-frontend.vercel.app"
+    "http://localhost:5173",              # Local frontend
+    "https://cloe-frontend.vercel.app"   # Deployed frontend
 ]
 
 app.add_middleware(
@@ -77,34 +76,36 @@ research_topics = {
 # Endpoints
 # ------------------------
 
-# Root test
 @app.get("/")
 def root():
     return {"message": "Backend is live and serving 50 research topics!"}
 
-# Search a topic
 @app.get("/search")
 def search_topic(q: str = Query(..., description="Topic to search for")):
-    topic = research_topics.get(q)
-    if topic:
-        return {"topic": q, "description": topic}
+    """
+    Returns topics whose title contains the search query (case-insensitive).
+    """
+    results = [
+        {"topic": topic, "description": desc}
+        for topic, desc in research_topics.items()
+        if q.lower() in topic.lower()
+    ]
+    if results:
+        return {"results": results}
     else:
-        # Optional: suggest closest matches
-        suggestions = [t for t in research_topics.keys() if q.lower() in t.lower()]
-        return {"error": f"No description found for '{q}'", "suggestions": suggestions}
+        return {"results": [], "message": f"No topics found containing '{q}'."}
 
-# Summarize a topic
 @app.get("/summarize")
 def summarize_topic(topic: str = Query(..., description="Topic to summarize")):
     description = research_topics.get(topic)
     if description:
-        # For now, summary is same as description; can be extended later
+        # For now, summary is same as description
         return {"topic": topic, "summary": description}
     else:
+        # Suggest partial matches
         suggestions = [t for t in research_topics.keys() if topic.lower() in t.lower()]
-        return {"error": f"No summary found for '{topic}'", "suggestions": suggestions}
+        return {"topic": topic, "summary": None, "suggestions": suggestions}
 
-# Get all topics
 @app.get("/all")
 def get_all_topics():
     return {"topics": list(research_topics.keys())}
